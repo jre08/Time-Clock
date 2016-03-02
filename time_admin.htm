@@ -1,0 +1,608 @@
+<html>
+<head>
+<title>Time Clock</title>
+<meta http-equiv="Content-Language" content="en-us">
+<!-- App params http://msdn.microsoft.com/library/default.asp?url=/workshop/author/hta/hta_node_entry.asp -->
+<HTA:Application
+	ApplicationName="Time Clock"
+	border="thick"
+	BorderStyle="static"
+	Contextmenu="no"
+	InnerBorder="no"
+	MaximizeButton="No"
+	MinimizeButton="No"
+	ShowinTaskbar="NO"
+	Sysmenu="Yes"
+	Scroll="yes"
+	SingleInstance="yes"
+>
+<style type="text/css">
+#calender {
+	width: 200px;
+	font-family: ms sans serif, sans serif;
+	font-size: 7pt;
+	}
+
+#calenderTable {
+	border-style: outset;
+	border-width: 2px;
+	border-color: black;
+	background-color: #EEE;
+	display: none;
+	position: absolute;
+	z-index: 1;
+	top: 0px;
+	left: 0px;
+	}
+#calenderTable TD {
+	text-align: center;
+	font-size: 7pt;
+	width: 19px;
+	}
+#calenderTableHead TR {
+	background-color: white;
+	}
+#calenderTableDays TR {
+	background-color: #C3D4E7;
+	}
+#selectMonth, #selectYear {
+	font-family: ms sans serif, sans serif;
+	font-size: 7pt;
+	border-width: 0px;
+	border-style: none;
+	}
+
+#calenderTable A {
+	color: blue;
+	text-decoration: none;
+	font-size: 11pt;
+	font-family: "courier new";
+	}
+#calenderTable A:hover {
+	color: red;
+	text-decoration: none;
+	}
+.normalDay {
+	border: 1px dotted black;
+	cursor: pointer;
+	}
+.hlDay {
+	border: 1px dotted black;
+	background-color: #FFF;
+	color: red;
+	cursor: pointer;
+	}
+.toDay {
+	border: 1px solid #E70;
+	background-color: #FD8;
+	color: #E70;
+	font-weight: bold;
+	cursor: pointer;
+	}
+.choosenDay {
+	border: 1px solid green;
+	background-color: #A8FAA8;
+	color: green;
+	font-weight: bold;
+	cursor: pointer;
+	}
+.style1 {
+	text-align: center;
+@media print {input.noPrint { display: none; }}
+}
+</style>
+<script type="text/vbscript">
+Sub window_onload
+document.getElementById("Calendar1").Year = Datepart("yyyy",now)
+document.getElementById("Calendar1").Month = Datepart("m",now)
+document.getElementById("Calendar1").Day = Datepart("d",now)
+document.getElementById("endDate").value = formatdatetime(now(),2)
+document.getElementbyId("startDate").value = dateadd("d",-14,formatdatetime(now(),2))
+End Sub
+
+
+	Function ChkIn
+If Not Name1.value = "Please select a Name" then
+	Const adOpenStatic = 3
+	Const adLockOptimistic = 3
+
+
+	Set objConnection = CreateObject("ADODB.Connection")
+	Set objRecordSet = CreateObject("ADODB.Recordset")
+	set objrecordset1 = createobject("ADODB.Recordset")
+	set tmerecordset = createobject("ADODB.Recordset")
+
+
+objConnection.Open _
+    "Provider = Microsoft.Jet.OLEDB.4.0; " & _
+        "Data Source = '\\dc1.panortho.panhandleortho.com\time clock\time.mdb'" 
+
+	'objRecordSet.Open "Employees", objconnection
+	objRecordSet.Open "Select * from Employees " & _
+    "WHERE LastName = '" & Name1.Value & "'", objconnection
+
+
+'*** This checks to see if they are logged in today, so that it won't create a record twice.
+tmeRecordset.Open "Select * from [Time] " & _
+"Where LastName = '" & Name1.Value & "'" & _
+" And UseDate = '" & FormatDateTime(Date(),1) & "'" & _
+" And ClockOut = '0'", objconnection, adOpenStatic, adLockOptimistic
+
+
+clockedin = tmeRecordset.recordcount
+tmeRecordset.Close
+    If not objRecordset.fields.item("Password") = Password.Value then
+    	document.getElementById("message").innerHTML = "Password incorrect"
+'	Location.Reload(True)
+        Elseif Name1.Value = "Please Select a Name" then
+    	document.getElementById("message").innerHTML = "Please Select a Name from the drop down menu."
+'   	Location.Reload(True) 
+    Elseif clockedin >= 1 Then
+'		msgbox "you are already clocked in"
+		document.getElementById("message").innerHTML = "You are Already clocked in.  Please Clock out first."
+'	
+'location.Reload(True)
+        Else
+		document.getElementById("passfield").value = ""	
+'**** Need to change the time back to General time not military, so that time difference equation works
+	tmeRecordset.Open "Select * from [Time]", objconnection, adOpenStatic, adLockOptimistic
+	
+	
+	tmeRecordset.AddNew
+	tmeRecordset("LastName") = objRecordset.fields.item("LastName")
+	tmeRecordset("ClockIn")	= FormatDateTime(Now(),4)
+	UseDate = FormatDateTime(Date(), 2)
+	tmeRecordset("UseDate") = UseDate
+	tmeRecordset("clockout") = 0
+	tmeRecordset.update
+	tmeRecordset.close
+	objrecordset.close
+
+	'***  UPdate Recored ***
+	objRecordSet.Open "Select * From Employees Where LastName = '" & Name1.Value & "'", objconnection, adOpenStatic, adLockOptimistic
+
+	objRecordset.Fields.Item("ClockIn") = FormatDateTime(Now(), 4)
+   	objRecordset.Update
+	
+'		objrecordset.close
+'		objconnection.close
+  		document.getElementById("message").innerHTML = "You have successfully logged in.  Thak you have a good day!"
+		Pause
+'Location.Reload(True)
+
+End IF
+Else
+	document.getElementById("message").innerHTML =  "Please select a name from the drop down menu."	
+'	MsgBox "Please select a name from the drop down menu."
+End IF
+
+End Function
+
+
+
+Sub Chkout
+If Not Name1.value = "Please select a Name" then
+
+	Const adOpenStatic = 3
+	Const adLockOptimistic = 3
+
+
+	Set objConnection = CreateObject("ADODB.Connection")
+	Set objRecordSet = CreateObject("ADODB.Recordset")
+	set objrecordset1 = createobject("ADODB.Recordset")
+	set tmerecordset = CreateObject("ADODB.Recordset")
+
+objConnection.Open _
+    "Provider = Microsoft.Jet.OLEDB.4.0; " & _
+        "Data Source = '\\dc1.panortho.panhandleortho.com\time clock\time.mdb'" 
+
+	objRecordSet.Open "Select * from Employees " & _
+    "WHERE LastName = '" & Name1.Value & "'", objconnection
+    
+'*** This checks to see if they are logged in today, so that it won't create a record twice.
+tmeRecordset.Open "Select * from [Time] " & _
+"Where LastName = '" & Name1.Value & "'" & _
+" And UseDate = '" & FormatDateTime(Date(),2) & "'" & _
+" And Clockout = '0'", objconnection, adOpenStatic, adLockOptimistic
+tmeRecordset.Close
+   
+    If not objRecordset.fields.item("Password") = Password.Value then
+		document.getElementById("message").innerHTML =  "Password incorrect"
+'    	msgbox "Password incorrect"
+'	Location.Reload(True)
+    Elseif Name1.Value = "Please Select a Name" then
+		document.getElementById("message").innerHTML =  "Please Select a Name from the drop down menu."
+'    	msgbox "Please Select a Name from the drop down menu."
+'    	Location.Reload(True)
+    Elseif clockedin = "0" then
+		document.getElementById("message").innerHTML =  "You must clock in."
+'    msgbox "You must clock In"
+    Else
+    document.getElementById("passfield").value = ""
+    Clockin = objRecordset.fields.item("ClockIn")
+    useDate = FormatDateTime(Date(),2)
+ 	tmeRecordset.Open "Select * from [Time] Where UseDate='" & useDate & "'" & " and LastName=" & "'" & Name1.Value & "'"& " and ClockIn=" & "'" & clockin & "'" , objconnection, adOpenStatic, adLockOptimistic
+'	tmeRecordset("LastName") = objRecordset.fields.item("LastName")
+	tmeRecordset("ClockOut") = FormatDateTime(Now(), 4)
+'	tmeRecordset("TotalTime") = 
+'	UseDate = FormatDateTime(Date(), 2)
+'	tmeRecordset("UseDate") = UseDate
+	tmeRecordset.update
+
+	
+'	objrecordset.close
+	
+'	objRecordSet.Open "Select * From Employees Where LastName = '" & Name1.Value & "'", objconnection, adOpenStatic, adLockOptimistic
+'	objRecordset.Fields.Item("ClockOut") = FormatDateTime(Now(), 4)
+'	objRecordset.Update
+	
+
+    clockout = tmeRecordset.fields.item("ClockOut")
+objrecordset.close
+
+set timeRecordset = createobject("ADODB.Recordset")
+    timeRecordset.open "Select * from [Time] Where UseDate='" & useDate & "'" & " and LastName=" & "'" & Name1.Value & "'"& " and ClockIn=" & "'" & clockin & "'" , objconnection, adOpenStatic, adLockOptimistic
+    clockin = timeRecordset.fields.item("ClockIN")
+    clockout = timeRecordset.fields.item("ClockOut")
+
+If datepart("h", clockout) = datepart("h", clockin) then
+	HourDif = 00
+elseIF datepart("h",clockout) = 00 then
+	HourDif = 24 - datepart("h",clockin)
+elseif datepart("h",clockout) > datepart("h", clockin) then
+	Hourdif = datepart("h", clockout) - datepart("h",clockin) - 1
+else
+	HourDif = datepart("h", clockout) - datepart("h", clockin) + 24
+
+End if
+
+'1
+If datepart("n",clockin) > datepart("n",clockout) and HourDif = 1  then
+	HourDif = 0 
+	MinDif = 60 - datepart("n",clockin) + datepart("n", clockout)
+elseif datepart("h",clockout) > datepart("h", clockin) and datepart("n", clockout) > datepart("n",clockin) then
+	Mindif = datepart("n",clockout) - datepart("n",clockin)
+	Hourdif = datepart("h",clockout) - datepart("h",clockin)
+'2
+elseif datepart("h",clockout) > datepart("h", clockin) and datepart("n", clockin) > datepart("n",clockout) then
+	MinDif = 60 - datepart("n",clockin) + datepart("n",clockout)
+	HourDif = datepart("h", clockout) - datepart("h", clockin) - 1
+elseif datepart("n", clockin) = datepart("n", clockout) then
+	Mindif = 00
+elseIf datepart("n", clockout) = 00  then
+	MinDif = 60 - datepart("n",clockin)
+elseIf datepart("n", clockin) > datepart("n", clockout) then
+	Hourdif = HourDif - 1
+	MinDif = datepart("n",clockin) - datepart("n", clockout)
+Else
+	MinDif = datepart("n", clockout) - datepart("n", clockin)
+End if
+
+'If MinDif < 10 then
+'MinDif = cstr(0) + cstr(mindif)
+'End IF
+
+'If HourDif < 10 then
+'HourDif = cstr(0) + cstr(Hourdif)
+'End IF
+
+	timeRecordset("TotalTime") = HourDif & ":" & MinDif
+	timeRecordset.update
+	tmeRecordset.close
+	timeRecordset.close
+'	objRecordset.close
+	objconnection.close
+	
+document.getElementById("message").innerHTML = "You have been clocked out.  Thank you, have a good day!"
+pause
+'Location.Reload(True)
+
+End IF
+Else
+		document.getElementById("message").innerHTML =  "Please select a name from the drop down menu."
+'	MsgBox "Please select a name from the drop down menu."
+End IF
+	
+End Sub
+
+
+Sub Ttime
+
+If Not Name1.value = "Please select a Name" then
+
+	Const adOpenStatic = 3
+	Const adLockOptimistic = 3
+
+
+	Set objConnection = CreateObject("ADODB.Connection")
+	Set objRecordSet = CreateObject("ADODB.Recordset")
+	
+	useDate = FormatDateTime(Date(),2)
+	
+objConnection.Open _
+    "Provider = Microsoft.Jet.OLEDB.4.0; " & _
+        "Data Source = '\\dc1.panortho.panhandleortho.com\time clock\time.mdb'" 
+        
+    objRecordset.open "Select * from [Time] " & _
+    "WHERE LastName = '" & Name1.Value & "'" & _
+    "And UseDate= '" & useDate & "'" & _
+    "ORDER BY TotalTime" & "," & "'" & UseDate & "'" , objconnection, adOpenStatic, adLockOptimistic
+    	
+objRecordSet.MoveFirst
+
+Do Until objRecordset.EOF
+ document.getElementById("message").innerHTML = objREcordset.Fields.ITem("TotalTime") & _
+        vbTab & objRecordset.Fields.Item("LastName")
+    objRecordset.MoveNext
+Loop
+
+Else
+	document.getElementById("message").innerHTML = "Please select a name from the drop down menu."
+End IF
+	
+End Sub
+
+Sub WeekTot
+
+If Not Name1.value = "Please select a Name" then
+
+	Const adOpenStatic = 3
+	Const adLockOptimistic = 3
+
+
+	Set objConnection = CreateObject("ADODB.Connection")
+	Set objRecordSet = CreateObject("ADODB.Recordset")
+	
+	useDate = FormatDateTime(Date(),2)
+	
+objConnection.Open _
+    "Provider = Microsoft.Jet.OLEDB.4.0; " & _
+        "Data Source = '\\dc1.panortho.panhandleortho.com\time clock\time.mdb'" 
+        
+    objRecordset.open "Select * from [Time] " & _
+    "WHERE LastName = '" & Name1.Value & "'" & _
+    " And UseDate = '" & useDate & "'" & _
+    " And NOt Clockout = '0'", objconnection, adOpenStatic, adLockOptimistic'
+ '   " And NOt Clockout = Null", objconnection, adOpenStatic, adLockOptimistic
+'    "ORDER BY TotalTime" & "," & "'" & UseDate & "'", objconnection, adOpenStatic, adLockOptimistic
+
+   	Totmin = 0
+objRecordSet.MoveFirst
+
+Do Until objRecordset.EOF
+	Tothr = Datepart("h",objRecordset.Fields.Item("TotalTime")) + Tothr
+	Totmin =  Datepart("n",objRecordset.Fields.Item("TotalTime")) + Totmin
+    TotWk =  "<tr width='800'><td width='200' align='center'>" & objRecordset.Fields.Item("UseDate") & "</td><td width='200' align='center'>" & objRecordset.Fields.Item("ClockIn") & "</td><td align='center'>" & objRecordset.Fields.Item("ClockOut") & "</td></tr>" + TotWk
+   objRecordset.MoveNext
+Loop
+	Do until 60 > Totmin'
+	Totmin = Totmin - 60
+	Tothr = Tothr + 1
+	Loop 
+'*** Need to figure out if larger than 60, how many minutes this is.  Subtract 60 minus total
+' minutes for minute total and divid 60 into hours for hours.  
+document.getElementById("message").innerHTML = "Total Hours: " &  Tothr & "   Total Minutes:  " & Totmin
+document.getElementById("WeekTotal").innerHTML = "<Table><tr width='800'><td width='200' align='center'>Date</td><td width='200' align='center'>Clock In Time</td><td align='center'>Clock Out Time</td>" & TotWk & "</table>"
+Else
+	document.getElementById("message").innerHTML = "Please select a name from the drop down menu."
+End IF
+	
+End Sub
+
+Sub TotalTime
+
+If Not Name1.value = "Please select a Name" then
+
+	Const adOpenStatic = 3
+	Const adLockOptimistic = 3
+
+
+	Set objConnection = CreateObject("ADODB.Connection")
+	Set objRecordSet = CreateObject("ADODB.Recordset")
+	
+'	starDate = FormatDateTime(startDate.value,1)
+'	enDate = FormatDateTime(endDate.value,1)
+	
+objConnection.Open _
+    "Provider = Microsoft.Jet.OLEDB.4.0; " & _
+        "Data Source = '\\dc1.panortho.panhandleortho.com\time clock\time.mdb'" 
+'---Bad code---
+'Dim Dates()
+'intsize = 0
+'sdate = dateadd("d",-1,"startDate.value")
+'diff = datediff("d","startDate.value","endDate.value")
+
+'do until datevar = endDate.value
+'ReDim Preserve Dates(intsize)
+'datevar = dateadd("d",1,sdate)
+'Dates(intsize) = vmware
+'intsize = intsize + 1
+'startdate = vmware
+'loop
+'--- Bad code---
+If endDate.value > formatdatetime(now(),2) then
+endDate.value = formatdatetime(now(),2)
+msgbox "The End Date is not here yet.  The End Date has been reset to Today's Date."
+end if
+
+Dim Dates()
+intsize = 0
+adddate = dateadd("d",-1,startDate.value)
+diff = datediff("d",startDate.value,endDate.value)
+' msgbox diff
+
+do until vmware = cdate(endDate.value)
+ReDim Preserve Dates(intsize)
+vmware = dateadd("d",1,adddate)
+Dates(intsize) = vmware
+intsize = intsize + 1
+adddate = vmware
+loop
+
+for i = 0 to diff
+Datesvar = "UseDate = '" & Dates(i) & "' or " & Datesvar
+Next
+Var1 = Len(Datesvar)
+var1 = var1 - 4
+Datesvar = left(Datesvar,var1)
+setState = "Select * from [Time] " & _
+     "where ("
+'for i = 0 to diff
+setState = setState + Datesvar & ") and LastName = '" & Name1.Value & "' and not Clockout = '0' order by CDate(UseDate) ASC"
+'Next
+
+        
+    objRecordset.open  setState,objconnection, adOpenStatic, adLockOptimistic
+'     "where UseDate between '" & startDate.value & "' and '" & endDate.value & "'" & _
+'     " and LastName = '" & Name1.Value & "'" & _
+'     " and not Clockout = '0'", objconnection, adOpenStatic, adLockOptimistic
+'   " And NOt Clockout = Null", objconnection, adOpenStatic, adLockOptimistic
+'    "ORDER BY TotalTime" & "," & "'" & UseDate & "'", objconnection, adOpenStatic, adLockOptimistic
+'msgbox "OK"
+'msgbox objRecordSet.Fields.Count
+   	Totmin = 0
+   	if not objRecordset.EOF then
+objRecordSet.MoveFirst
+
+Do Until objRecordset.EOF
+	Tothr = Datepart("h",objRecordset.Fields.Item("TotalTime")) + Tothr
+	Totmin =  Datepart("n",objRecordset.Fields.Item("TotalTime")) + Totmin
+	TotWk =  "<tr width='800'><td width='200' align='center'>" & objRecordset.Fields.Item("UseDate") & "</td><td width='200' align='center'>" & FormatDateTime(objRecordset.Fields.Item("ClockIn"),3) & "</td><td align='center'>" & FormatDateTime(objRecordset.Fields.Item("ClockOut"),3) & "</td><td align='center' width='200'>" & objRecordset.Fields.Item("Totaltime") & "</td></tr>" + TotWk
+   objRecordset.MoveNext
+Loop
+	Do until 60 > Totmin
+	Totmin = Totmin - 60
+	Tothr = Tothr + 1
+	Loop 
+else
+document.getElementById("message").innerHTML = "NO Records Found"
+End if
+
+'*** Need to figure out if larger than 60, how many minutes this is.  Subtract 60 minus total
+' minutes for minute total and divid 60 into hours for hours.  
+'msgbox "OK"
+document.getElementById("message").innerHTML = "Start Date: " & startDate.value & "    End Date: " & endDate.value
+document.getElementById("WeekTotal").innerHTML = "<Table><tr width='800'><td colspan='2' class='style1'>" & UCase(LastName.value) & "'s Time Sheet for " & startDate.value & " thru " & endDate.value & "<p></p></td></tr><tr width='800'><td width='200' align='center'>Date</td><td width='200' align='center'>Clock In Time</td><td align='center'>Clock Out Time</td><td width='200' align='center'>Daily Total" & TotWk & "</td><td align='center'><tr><td>Total Hours: " &  Tothr & "   Total Minutes:  " & Totmin & "</td</tr></table>"
+Else
+	document.getElementById("message").innerHTML = "Please select a name from the drop down menu."
+End IF
+	
+End Sub
+Sub Pause
+iTimerID = window.setInterval("Location.reload(true)", 10000)
+End Sub
+
+Sub calendar(var)
+CalenDate = document.getElementById("Calendar1").value 
+IF var = "Start" then
+document.getElementById("startDate").value = CalenDate
+else
+document.getElementById("endDate").value = CalenDate
+End IF
+End Sub
+Sub runPrint
+docprint = document.getElementById("WeekTotal").innerHTML
+'msgbox docprint
+window.print()
+end Sub
+</script>
+<script type="text/javascript">
+function winprint() {
+html= WeekTotal.innerHTML;
+var win = window.open('','','width=800,height=600');
+win.document.open("text/html","replace");
+	win.document.write("<html><body onload='javascript:window.print()'>" + html + "</body></html>");
+	win.document.close();
+}
+</script>
+
+</head>
+
+<body>
+
+
+
+<div class='noprint' align="center">
+  <center>
+  <br>
+	<table style="width: 100%">
+		<tr>
+			<td style="width: 174px" colspan="2">
+        &nbsp;&nbsp;&nbsp;&nbsp; </td>
+			<td rowspan="2"><span style="height:135px; width:460px; background-color:#ffffff;" id="message">
+      <img src="logo.jpg" width="460" height="135"><br>
+			<br>
+			<br>
+			</span>
+      		</td>
+		</tr>
+		<tr>
+			<td style="width: 174px; height: 152px" valign="top" class="style1" colspan="2">
+<OBJECT CLASSID="clsid:8E27C92B-1264-101C-8A2F-040224009C02"
+id=Calendar1>
+<param name="BackColor" value="-2147483633">
+<param name="DayLength" value="1">
+<param name="MonthLength" value="1">
+<param name="DayFontColor" value="0">
+<param name="FirstDay" value="7">
+<param name="GridCellEffect" value="1">
+<param name="GridFontColor" value="10485760">
+<param name="GridLinesColor" value="-2147483632">
+<param name="ShowDateSelectors" value="-1">
+<param name="ShowDays" value="-1">
+<param name="ShowHorizontalGrid" value="-1">
+<param name="ShowTitle" value="-1">
+<param name="ShowVerticalGrid" value="-1">
+<param name="TitleFontColor" value="10485760">
+<param name="ValueIsNull" value="0">
+  <param name="_Version" value="524288">
+  <param name="_ExtentX" value="7620">
+  <param name="_ExtentY" value="5080">
+  <param name="_StockProps" value="1">
+  <param name="Year" value="2007">
+  <param name="Month" value="5">
+  <param name="Day" value="2">
+</OBJECT>
+
+
+    		</td>
+		</tr>
+		<tr>
+			<td style="width: 174px; height: 63px" valign="top" class="style1">
+			<a href="#"  onClick="calendar('Start')">
+            <img src="calendar.gif" border="0" width="24" height="22"></a><br>
+						Start Date
+
+<br>
+
+<input type="text" id="startDate" size="15" style="width: 99px; height: 22px"></td>
+		<td style="width: 174px; height: 63px" valign="top" class="style1"><a href="#"  onClick="calendar('End')">
+        <img src="calendar.gif" border="0" width="24" height="22"></a><br>
+End Date
+<br>
+<input type="text" id="endDate" size="15" style="width: 99px; height: 22px">
+		</td>
+			<td>
+        <select size="1" id="LastName" name="Name1" tabindex="1" style="width: 160px; height: 9px">
+        <option selected value="Please select a Name">Please select a Name</option>
+        <option value="Linda Cass">Linda Cass</option>
+        <option value="Danielle Gilbertson">Danielle Gilbertson</option>
+        <option value="John Edenfield">John Edenfield</option>
+        <option value="Carolyn Owens">Carolyn Owens</option>
+        <option value="Brandi Rock">Brandi Rock</option>
+        <option value="Val Banning">Val Banning</option>
+        <option value="Ken Meisner">Ken Meisner</option>
+        <option value="Mike Cass">Mike Cass</option>
+        <option value="Sarlentia Bell">Sarlentia Bell</option>
+        <option value="Sandy Finch">Sandy Finch</option>
+	    <option value="Diana Conner">Diana Conner</option>
+	    <option value="Deborah Goodwin">Deborah Goodwin</option>
+	    <option value="Jessica Brooks">Jessica Brooks</option>
+        </select>&nbsp;&nbsp;&nbsp;&nbsp;
+<input type="submit" value="Total" onClick="TotalTime" tabindex="6">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+	<input type="button" value="Print" onclick="javascript:winprint()"></td>
+		</tr>
+	</table>
+	</div>
+<span id="WeekTotal"></span>
+</body></html>

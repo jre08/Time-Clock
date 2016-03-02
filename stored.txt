@@ -1,0 +1,99 @@
+Stored Procedures
+The Datareader itself, as with the DataSet, is more than capable of dealing with Stored Procedures; they offer plenty of performance advantages and the ability to consolidate many operations in one location. However, the Dataset's approach to Stored Procedures tends to become a little drawn-out, as it follows closely with the data manipulation model that the Dataset offers. When it comes to quick and straightforward Stored Procedure handling, the DataReader's Command Object methods are more than sufficient, as we'll see now.
+
+We begin by creating a trivial stored procedure that accepts one parameter - @txt, which is passed into my query.
+
+CREATE PROCEDURE ShowSuppliers ( 
+@txt varchar(50) 
+) 
+AS 
+Select CompanyName, City, Country from Suppliers Where  
+Country like "%" + @txt + "%" 
+
+If you wanted to simply execute a Stored Procedure, pass it a value, and then read through that, how would you do it? Easy! Prior to calling the ExecuteReader method, replace the SQL String in the SqlCommand constructor with the name of the Stored Procedure, then specify to the Command Object's CommandType Property that you're working with a Stored Procedure. After you've done this, implement the Parameters collection (via the Param SqlParameter variable) to set up the value you wish to pass to your stored procedure, like so:
+
+SqlCommand objCommand = new SqlCommand("ShowSuppliers", 
+objConnect); 
+objCommand.CommandType = CommandType.StoredProcedure; 
+
+SqlDataReader objDataReader = objCommand.ExecuteReader 
+(CommandBehavior.CloseConnection); 
+
+SqlParameter Param = objCommand.Parameters.Add("@txt",  
+SqlDbType.VarChar, 50); 
+Param.Value = "US"; 
+
+// ... Get Data
+
+Then display your data using the DataReader methods, like the while loop code example listed in the last section, or via the DataGrid example that's coming up.
+
+Stored Procedures - and Alternative Method
+
+An alternative method of working with Stored Procedures within this context is the Command.ExecuteNonQuery() method. This is useful when working with more multifaceted Stored Procedures that have input, output and return values. Using them is not that much more complicated; simply implement the Parameters collection shown below, i.e. Param.Direction = ParameterDirection.Input or .OutPut or .ReturnValue; and apply the .Value =, whatever the value type:
+
+CREATE PROCEDURE ShowSuppliers ( 
+@txt varchar(50), 
+@Name varchar (50) output, 
+@Company varchar (50) output, 
+@Country varchar (50) output 
+) 
+AS 
+Select @Name = ContactName, @Company = CompanyName,  
+@Country = Country from Suppliers Where Country like "%" + @txt + "%" 
+GO 
+
+Here we've created a slightly more elaborate Stored Procedure to illustrate the ExecuteQuery method. As you can see, this not only contains our initial search word variable - @txt, but we could now obtain several output values.
+
+// ... Database Connection / Command here like above 
+
+SqlParameter Param = objCommand.Parameters.Add("@txt",  
+SqlDbType.VarChar, 50); 
+Param.Direction = ParameterDirection.Input; 
+Param.Value = "US"; 
+
+Param = objCommand.Parameters.Add("@Name", SqlDbType.VarChar,50); 
+Param.Direction = ParameterDirection.Output; 
+
+Param = objCommand.Parameters.Add("@Company", SqlDbType.VarChar,50); 
+Param.Direction = ParameterDirection.Output; 
+
+Param = objCommand.Parameters.Add("@Country", SqlDbType.VarChar,50); 
+Param.Direction = ParameterDirection.Output; 
+
+objCommand.ExecuteNonQuery(); 
+
+Response.Write (objCommand.Parameters["@Name"] 
+.Value.ToString() + "<BR>"); 
+Response.Write (objCommand.Parameters["@Company"] 
+.Value.ToString() + "<BR>"); 
+Response.Write (objCommand.Parameters["@Country"] 
+.Value.ToString() + "<BR>");
+
+The only thing here that's dissimilar from our last Sproc example is the fact that we've just added a new Parameter Direction to reflect the values we wish to retrieve. In turn, we Response.Write them in the way shown here. For added information on this and working with Stored Procedures with return values, refer to the .NET documentation.
+
+But now let's imagine you want to display data in a datagrid using the datareader, rather than using the while loop and formatting a table through HTML. But in this case, you don't require any of the DataGrid's common properties, like paging. How would this be accomplished? In a similar way to the DataReader example code at the end of the last section. Everything remains the same, except that after you run the ExecuteReader() method, you simply bind your DataGrid's datasource to the Datareader as shown.
+
+MyDataGrid.DataSource = objDataReader; 
+
+MyDataGrid.DataBind();
+
+Well, what do you think? A lot of cool methods, huh? All this is not that far removed from classic ASP in its techniques and order of usage. But it obvious how many more options you have to work with and quickly display your data.
+
+Aside from binding our Datagrid, it's just as easy to bind other server controls. For instance, to bind a DropDownList control, you obviously change your DataGrid Control to a DropDownList, though the Datasource and Binding techniques are the same. The only difference is dependent on the control you use, as they all have their own unique properties that can be assigned. How do we make our DropDownList display our query results? Right after your ExecuteReader method, specify its DataTextField - the value to be displayed, and the DataValueField - the value to be passed when an item is selected. Here goes:
+
+// ... our Data Access was here. Then we assign  
+our new control's properties 
+
+MyDropList.DataSource = objDataReader; 
+
+MyDropList.DataTextField = "Country"; 
+MyDropList.DataValueField = "Country"; 
+
+MyDropList.DataBind(); 
+
+//And our control placed in our runat="server"  
+form tags on our page 
+
+<ASP:DropDownList id="MyDropList" runat="server" />
+
+Ultimately you should, at all times strive to utilize the least overhead when accessing data. In this instance, the DataReader is clearly the best choice. Be that as it may, in the next section we'll explore some more involved data access methodologies with which you can present your data.

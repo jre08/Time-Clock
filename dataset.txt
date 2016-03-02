@@ -1,0 +1,110 @@
+The DataSet
+The DataSet can be thought of as an in-memory storage container for all your data. It allows us far more capability and power over the manipulation and presentation of our data, even extending to XML. Here, the DataAdapter acts as the intermediary object responsible for joining our database with our DataSet, as the Command Object is with the DataReader. 
+
+Unlike the DataReader object, the DataAdapter/DataSet not only gives you the ability to work with disconnected data stores, but can also be used for common editing functions such as inserting, deleting, and updating your data, and even setting transactional logic.
+
+Working with DataSet
+
+In this example, we'll demonstrate a common end result when working with a DataAdapter and DataSet: the DataGrid server control for sole data presentation.
+
+We already know how to open a connection to our database. However, as we're going to deal with our DataSet, the order of events changes at this point. Recall us using the Command Object to query the database? When working with Datasets, we would use the DataAdapter to do the querying, and the Fill() method to populate our DataSet with results:
+
+SqlDataAdapter objDataAdapter = new SqlDataAdapter ("Select  
+CompanyName, ContactName, City, Country, Region from  
+Suppliers", objConnect); 
+
+DataSet objDS = new DataSet(); 
+
+objDataAdapter.Fill (objDS);
+
+What's going on here? Well, we use the SqlDataAdapter to execute the SQL statement, and upon this action it returns data to fill our DataSet. Once our DataSet object is created, it in turn exposes the Datatable, and within it a collection of rows and columns that we'll examine later on. Incidentally, you could, if you so chose, name the newly create Datatable, like so: objDataAdapter.Fill (objDS,"MyTable"); Note: For an OleDB database use OleDbDataAdapter.
+
+The most common method for exposing data upon the creation of a disconnected data store would be the Fill() method, which we've mentioned, and will demonstrate in just a moment. At this point you may be wondering why the DataReader has been explored in such detail. Well, here we're focusing on data access and presentation, and the DataReader is more commonly used for these purposes. The DataSet, which has roughly an equivalent number of methods, is geared more towards data management. We momentarily dealt with its Fill() method, as this is what enabled us to retrieve data easily. Additional DataSet methodology would involve complex methods for data manipulation. I would refer you to the .NET documentation at this point, since we won't cover this information here.
+
+The DataGrid Control within .NET is probably the most commonly used control, as it offers paging, filtering and sorting. This is the reason for the common DataSet / Datagrid relationship. The Datareader, being a forward/read-only object, cannot support these conditions unless you cleverly program it to do so. 
+
+Displaying the Data
+
+Now that we've discussed the chosen methods of data retrieval, we have to look at how we'll display it. We can do this by binding our DataSet to the DataGrid. We assign the DataGrid's DataSource property to our DataSet, and then bind it to view our results:
+
+MyDataGrid.DataSource = objDS 
+MyDataGrid.DataBind(); 
+
+We've learned that the DataSet itself is capable of holding multiple tables of data, each being a DataTable. From this point you could further manipulate your data before you bind it with the DataTable object, as we'll illustrate further on.
+
+What's more, by using a DataView we can create different views on our Dataset's DataTable, which enables us to filter or sort the data. To do this, you'd assign your DataGrid's Datasource property to the DataView, then bind it.
+
+DataView objView = objDS.Tables[0].DefaultView; 
+
+objView.RowFilter = "Country like '%US%'";
+
+or
+
+objView.Sort = "Country asc"; 
+
+MyDataGrid.DataSource = objView; 
+
+MyDataGrid.DataBind();
+
+The results would then reflect the filtering or sorting you've established. For instance, you could implement this by pulling in a value from a dropdown list box that specifies what you wish to filter out or sort by.
+
+Also keep in mind that within your .NET page all server controls are placed within runat="server" form tags. Here's the entire code:
+
+<script runat="server" language="C#"> 
+
+void Page_Load(Object Source,EventArgs E) { 
+
+SqlConnection objConnect = new SqlConnection  
+("server=(local);uid=sa;pwd=;database=Northwind;");  
+
+objConnect.Open(); 
+
+SqlDataAdapter objDataAdapter = new SqlDataAdapter  
+("Select CompanyName, ContactName, City, Country, Region from  
+Suppliers", objConnect); 
+
+DataSet objDS = new DataSet(); 
+
+objDataAdapter.Fill (objDS); 
+
+MyDataGrid.DataSource = objDS; 
+
+//DataView objView = objDS.Tables[0].DefaultView; 
+//objView.RowFilter = "Country like '%US%'"; 
+//MyDataGrid.DataSource = objView; 
+
+MyDataGrid.DataBind(); 
+
+objDataAdapter.Dispose();  
+objDataAdapter = null;  
+objDS.Dispose(); 
+objDS = null; 
+objConnect.Close(); 
+objConnect = null; 
+
+} 
+
+</script> 
+
+<form runat="server"> 
+<ASP:DataGrid id="MyDataGrid" runat="server" /> 
+</form> 
+
+Recall in the last section how I quickly illustrated binding to a DropDownList? Well the same process could be applied to the DataSet, except that in this instance it would occur after the Fill method has been executed (as opposed to the ExecuteReader), and each would be assigned a different datasource.
+
+Before we conclude, let's revisit our DataTable for a moment. If you wanted more control over your data you could set up the DataTable from your dataset, and loop through it just like you did with the DataReader. Therefore, after using the Fill() method explained above, you can loop through your DataTable DataRows with something like this:
+
+DataTable dsReader = objDS.Tables[0];  
+foreach(DataRow row in dsReader.Rows) { 
+
+Response.Write (row[0] + "<BR>"); 
+
+}
+
+Conclusion
+In summary, this introductory tutorial should've whet your appetite, and has hopefully encouraged you to jump right in and create an application or two. In addition, be sure to read the .NET documentation and QuickStart tutorials for more information on everything we've examined, and more so on what we've referred to in passing (including reading XML with the DataReader, implementing transactions, and inserting, editing and updating your data with a DataSet). 
+
+You should now understand the ease of database access and data presentation that's available within ADO.NET, and have a feel for the further directions these objects, notably the DataSet, can take. I hope you now have a firmer grasp on the power of .NET, with more than enough information to get you up and running.
+
+Until next time, happy .NETing!
+
